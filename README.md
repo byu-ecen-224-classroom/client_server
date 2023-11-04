@@ -27,7 +27,7 @@ Between semesters, you might need to delete the photos folder.
 You can install a systemd service to have the server run on start up and restart automatically if it crashes. The file is `client_lab_server.service` and can be installed running the following commands:
 
 ```bash
-cp client_lab_server.service /etc/systemd/system/
+sudo cp client_lab_server.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl start client_lab_server.service   # Start service
 sudo systemctl enable client_lab_server.service  # Have service run on boot

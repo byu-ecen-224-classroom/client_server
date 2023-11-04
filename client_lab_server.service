@@ -3,7 +3,7 @@ Description=Server for ECEn 224 Client Lab.
 
 [Service]
 User=ta
-WorkingDirectory=~/client_server
+WorkingDirectory=/home/ta/client_server
 ExecStart=/home/ta/client_server/.venv/bin/python /home/ta/client_server/app.py
 
 [Install]
