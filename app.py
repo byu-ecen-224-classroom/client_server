@@ -1,45 +1,73 @@
 import asyncio
+import logging
+import logging.handlers
 from pathlib import Path
-from datetime import datetime
+import re
 
 from aiohttp import web
 import aiohttp_jinja2
 import arrow
 import jinja2
 
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(level=logging.INFO)
+
+# Set up file handler
+handler = logging.handlers.TimedRotatingFileHandler(
+    "client_lab_server.log", when="midnight"
+)
+LOGGER.addHandler(handler)
+
+
 HOMEWORK_ID_LENGTH = 9
+IMAGE_SIZE = 49206
 ROOT_DIR = "photos"
 
-# TODO: Implement read_all...
+
+async def send_invalid_id(writer, homework_id):
+    writer.write(f"ERROR: Invalid homework ID {homework_id[:50]}".encode())
+    await writer.drain()
+    writer.close()
+    await writer.wait_closed()
 
 
 async def handle_client(reader, writer):
-    print("Client connected...")
+    LOGGER.info("Client connected...")
+
     # Read in homework ID
-    homework_id = await reader.read(HOMEWORK_ID_LENGTH)
+    homework_id = await reader.readexactly(HOMEWORK_ID_LENGTH)
 
     try:
         homework_id = homework_id.decode()
     except UnicodeDecodeError:
-        print("Unable to decode homework_id")
-        writer.write(f"Invalid homework ID: {homework_id}")
-        await writer.drain()
+        LOGGER.info(f"Unable to decode homework_id: {homework_id[:50]}")
+        await send_invalid_id(writer, homework_id)
+        return
+
+    if not re.fullmatch("[A-F0-9]{9}", homework_id):
+        LOGGER.info(f"Invalid homework_id: {homework_id[:50]}")
+        await send_invalid_id(writer, homework_id)
         return
 
     # Read image data
-    image_data = await reader.read()
-    print(f"Received data from {homework_id}: {image_data[:10]}")
+    image_data = await reader.readexactly(IMAGE_SIZE)
+    LOGGER.info(f"Received data from {homework_id}: {image_data[:50]}")
 
     path = Path(ROOT_DIR) / homework_id
     path.mkdir(parents=True, exist_ok=True)
 
     file_name = path / f"{arrow.now()}.bmp"
-    print(f"Saving image to {file_name}...")
+    LOGGER.info(f"Saving image to {file_name}...")
 
     with open(file_name, "wb") as f:
         f.write(image_data)
 
-    print("Done!\n\n")
+    LOGGER.info("Done!\n\n")
+    writer.write(b"SUCCESS")
+    await writer.drain()
+
+    writer.close()
+    await writer.wait_closed()
 
 
 async def image_server():
