@@ -1,4 +1,6 @@
+import argparse
 import asyncio
+import functools
 import logging
 import logging.handlers
 from pathlib import Path
@@ -24,14 +26,14 @@ IMAGE_SIZE = 49206
 ROOT_DIR = "photos"
 
 
-async def send_invalid_id(writer, homework_id):
-    writer.write(f"ERROR: Invalid homework ID {homework_id[:50]}".encode())
+async def send_error(writer, message):
+    writer.write(message)
     await writer.drain()
     writer.close()
     await writer.wait_closed()
 
 
-async def handle_client(reader, writer):
+async def handle_client(reader, writer, delay=0):
     LOGGER.info("Client connected...")
 
     # Read in homework ID
@@ -41,17 +43,31 @@ async def handle_client(reader, writer):
         homework_id = homework_id.decode()
     except UnicodeDecodeError:
         LOGGER.info(f"Unable to decode homework_id: {homework_id[:50]}")
-        await send_invalid_id(writer, homework_id)
+        await send_error(
+            writer, f"ERROR: Invalid homework ID {homework_id[:50]}".encode()
+        )
         return
 
     if not re.fullmatch("[A-F0-9]{9}", homework_id):
         LOGGER.info(f"Invalid homework_id: {homework_id[:50]}")
-        await send_invalid_id(writer, homework_id)
+        await send_error(
+            writer, f"ERROR: Invalid homework ID {homework_id[:50]}".encode()
+        )
         return
 
     # Read image data
     image_data = await reader.readexactly(IMAGE_SIZE)
     LOGGER.info(f"Received data from {homework_id}: {image_data[:50]}")
+
+    if delay:
+        LOGGER.info("Sleeping...")
+        await asyncio.sleep(delay)
+
+    # Make sure the data starts with the right bytes
+    if image_data[:2] != b"BM":
+        LOGGER.info(f"Invalid BMP file: It doesn't start with BM.")
+        await send_error(writer, b"ERROR: BMP file does not start with BM")
+        return
 
     path = Path(ROOT_DIR) / homework_id
     path.mkdir(parents=True, exist_ok=True)
@@ -70,11 +86,12 @@ async def handle_client(reader, writer):
     await writer.wait_closed()
 
 
-async def image_server():
-    server = await asyncio.start_server(handle_client, "", 2240)
+async def image_server(port, delay):
+    server = await asyncio.start_server(
+        functools.partial(handle_client, delay=delay), "0.0.0.0", port
+    )
 
-    addrs = ", ".join(str(sock.getsockname()) for sock in server.sockets)
-    print(f"Serving on {addrs}")
+    print(f"======== Running on tcp://0.0.0.0:{port} with {delay} s of delay ========")
 
     async with server:
         await server.serve_forever()
@@ -92,7 +109,9 @@ async def index(request):
 
 
 async def start_background_tasks(app):
-    app["image_server"] = asyncio.create_task(image_server())
+    app["image_server"] = asyncio.create_task(
+        image_server(app["image_port"], app["delay"])
+    )
 
 
 async def cleanup_background_tasks(app):
@@ -108,8 +127,12 @@ def get_relative_time(input):
     return arrow.get(input.stem).humanize()
 
 
-def run():
+def run(image_port=2240, web_port=2241, delay=0):
     app = web.Application()
+
+    # Set some custom configuration
+    app["image_port"] = image_port
+    app["delay"] = delay
 
     # Setup templates
     aiohttp_jinja2.setup(
@@ -126,8 +149,14 @@ def run():
     app.router.add_static("/photos", path="photos/")
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
-    web.run_app(app, port=2241)
+    web.run_app(app, port=web_port)
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image-server-port", type=int, default=2240)
+    parser.add_argument("--web-server-port", type=int, default=2241)
+    parser.add_argument("--delay", type=int, default=0)
+    args = parser.parse_args()
+
+    run(args.image_server_port, args.web_server_port, args.delay)
