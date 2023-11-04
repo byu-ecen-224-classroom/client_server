@@ -120,7 +120,7 @@ async def cleanup_background_tasks(app):
 
 
 def get_time(input):
-    return arrow.get(input.stem).format("MMM D, YYYY h:mm A")
+    return arrow.get(input.stem).to("US/Mountain").format("MMM D, YYYY h:mm A")
 
 
 def get_relative_time(input):
