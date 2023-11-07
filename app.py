@@ -120,11 +120,17 @@ async def cleanup_background_tasks(app):
 
 
 def get_time(input):
-    return arrow.get(input.stem).to("US/Mountain").format("MMM D, YYYY h:mm A")
+    try:
+        return arrow.get(input.stem).to("US/Mountain").format("MMM D, YYYY h:mm A")
+    except arrow.parser.ParserError:
+        return ""
 
 
 def get_relative_time(input):
-    return arrow.get(input.stem).humanize()
+    try:
+        return arrow.get(input.stem).humanize()
+    except arrow.parser.ParserError:
+        return ""
 
 
 def run(image_port=2240, web_port=2241, delay=0):
