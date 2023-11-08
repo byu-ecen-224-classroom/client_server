@@ -37,7 +37,12 @@ async def handle_client(reader, writer, delay=0):
     LOGGER.info("Client connected...")
 
     # Read in homework ID
-    homework_id = await reader.readexactly(HOMEWORK_ID_LENGTH)
+    try:
+        homework_id = await reader.readexactly(HOMEWORK_ID_LENGTH)
+    except asyncio.IncompleteReadError:
+        LOGGER.info("Incomplete read error")
+        await send_error(writer, b"Unable to read homework ID")
+        return
 
     try:
         homework_id = homework_id.decode()
@@ -55,10 +60,15 @@ async def handle_client(reader, writer, delay=0):
         )
         return
 
-    # Read image data
-    image_data = await reader.readexactly(IMAGE_SIZE)
-    LOGGER.info(f"Received data from {homework_id}: {image_data[:50]}")
+    LOGGER.info("Received valid homework ID. Now receiving image data...")
+    try:
+        image_data = await reader.readexactly(IMAGE_SIZE)
+    except asyncio.IncompleteReadError:
+        LOGGER.info("Incomplete read error")
+        await send_error(writer, b"Unable to read image data")
+        return
 
+    LOGGER.info(f"Received data from {homework_id}: {image_data[:50]}")
 
     # Make sure the data starts with the right bytes
     if image_data[:2] != b"BM":
