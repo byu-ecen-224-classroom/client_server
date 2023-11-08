@@ -14,11 +14,12 @@ import jinja2
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(level=logging.INFO)
 
-# Set up file handler
-handler = logging.handlers.TimedRotatingFileHandler(
-    "client_lab_server.log", when="midnight"
+# Set up output to file
+LOGGER.addHandler(
+    logging.handlers.TimedRotatingFileHandler("client_lab_server.log", when="midnight")
 )
-LOGGER.addHandler(handler)
+# Set up output to terminal
+LOGGER.addHandler(logging.StreamHandler())
 
 
 HOMEWORK_ID_LENGTH = 9
