@@ -48,7 +48,7 @@ async def handle_client(reader, writer, delay=0, timeout=5):
         await send_error(writer, b"ERROR: Did not receive enough data")
         return
     except asyncio.IncompleteReadError:
-        LOGGER.info("Incomplete read error")
+        LOGGER.info("Incomplete read error for homework ID")
         await send_error(writer, b"Unable to read homework ID")
         return
 
@@ -80,8 +80,8 @@ async def handle_client(reader, writer, delay=0, timeout=5):
         await send_error(writer, b"ERROR: Did not receive enough data")
         return
     except asyncio.IncompleteReadError:
-        LOGGER.info("Incomplete read error")
-        await send_error(writer, b"Unable to read image data")
+        LOGGER.info("Incomplete read error for image data")
+        await send_error(writer, b"ERROR: Unable to read image data")
         return
 
     LOGGER.info(f"Received data from {homework_id}: {image_data[:50]}")
