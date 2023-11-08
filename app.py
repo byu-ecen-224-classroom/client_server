@@ -190,7 +190,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--image-server-port", type=int, default=2240)
     parser.add_argument("--web-server-port", type=int, default=2241)
-    parser.add_argument("--delay", type=int, default=0)
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0,
+        help="How long (in seconds) to delay the response. We are trying to "
+        "lead up to why you need a threaded client, but if the server is too "
+        "fast, then it might look like its instantaneous, which negates the "
+        "need for a threaded client.",
+    )
     parser.add_argument(
         "--timeout",
         type=float,
