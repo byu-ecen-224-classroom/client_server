@@ -32,6 +32,7 @@ async def send_error(writer, message):
     await writer.drain()
     writer.close()
     await writer.wait_closed()
+    LOGGER.info("\n\n")
 
 
 async def handle_client(reader, writer, delay=0):
@@ -61,7 +62,9 @@ async def handle_client(reader, writer, delay=0):
         )
         return
 
-    LOGGER.info("Received valid homework ID. Now receiving image data...")
+    LOGGER.info(
+        f"Received valid homework ID {homework_id}. Now receiving image data..."
+    )
     try:
         image_data = await reader.readexactly(IMAGE_SIZE)
     except asyncio.IncompleteReadError:
