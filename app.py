@@ -35,12 +35,18 @@ async def send_error(writer, message):
     LOGGER.info("\n\n")
 
 
-async def handle_client(reader, writer, delay=0):
+async def handle_client(reader, writer, delay=0, timeout=5):
     LOGGER.info("Client connected...")
 
     # Read in homework ID
     try:
-        homework_id = await reader.readexactly(HOMEWORK_ID_LENGTH)
+        homework_id = await asyncio.wait_for(
+            reader.readexactly(HOMEWORK_ID_LENGTH), timeout=timeout
+        )
+    except TimeoutError:
+        LOGGER.info("Receiving homework ID took too long...")
+        await send_error(writer, b"ERROR: Did not receive enough data")
+        return
     except asyncio.IncompleteReadError:
         LOGGER.info("Incomplete read error")
         await send_error(writer, b"Unable to read homework ID")
@@ -66,7 +72,13 @@ async def handle_client(reader, writer, delay=0):
         f"Received valid homework ID {homework_id}. Now receiving image data..."
     )
     try:
-        image_data = await reader.readexactly(IMAGE_SIZE)
+        image_data = await asyncio.wait_for(
+            reader.readexactly(IMAGE_SIZE), timeout=timeout
+        )
+    except TimeoutError:
+        LOGGER.info("Receiving image data took too long")
+        await send_error(writer, b"ERROR: Did not receive enough data")
+        return
     except asyncio.IncompleteReadError:
         LOGGER.info("Incomplete read error")
         await send_error(writer, b"Unable to read image data")
@@ -101,9 +113,9 @@ async def handle_client(reader, writer, delay=0):
     await writer.wait_closed()
 
 
-async def image_server(port, delay):
+async def image_server(port, delay, timeout):
     server = await asyncio.start_server(
-        functools.partial(handle_client, delay=delay), "0.0.0.0", port
+        functools.partial(handle_client, delay=delay, timeout=timeout), "0.0.0.0", port
     )
 
     print(f"======== Running on tcp://0.0.0.0:{port} with {delay} s of delay ========")
@@ -125,7 +137,7 @@ async def index(request):
 
 async def start_background_tasks(app):
     app["image_server"] = asyncio.create_task(
-        image_server(app["image_port"], app["delay"])
+        image_server(app["image_port"], app["delay"], app["timeout"])
     )
 
 
@@ -148,12 +160,13 @@ def get_relative_time(input):
         return ""
 
 
-def run(image_port=2240, web_port=2241, delay=0):
+def run(image_port=2240, web_port=2241, delay=0, timeout=5):
     app = web.Application()
 
     # Set some custom configuration
     app["image_port"] = image_port
     app["delay"] = delay
+    app["timeout"] = timeout
 
     # Setup templates
     aiohttp_jinja2.setup(
@@ -178,6 +191,17 @@ if __name__ == "__main__":
     parser.add_argument("--image-server-port", type=int, default=2240)
     parser.add_argument("--web-server-port", type=int, default=2241)
     parser.add_argument("--delay", type=int, default=0)
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="How long to wait (in seconds) to receive data from the client "
+        "before timing out. If a client does not send all of the data the "
+        "server expects, but starts receiving data, then there can be a "
+        "deadlock of the client and server both waiting to receive. If the "
+        "timeout expires before receiving all the expected data, then the "
+        "server sends back and error message.",
+    )
     args = parser.parse_args()
 
-    run(args.image_server_port, args.web_server_port, args.delay)
+    run(args.image_server_port, args.web_server_port, args.delay, args.timeout)
