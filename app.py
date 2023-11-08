@@ -59,15 +59,16 @@ async def handle_client(reader, writer, delay=0):
     image_data = await reader.readexactly(IMAGE_SIZE)
     LOGGER.info(f"Received data from {homework_id}: {image_data[:50]}")
 
-    if delay:
-        LOGGER.info("Sleeping...")
-        await asyncio.sleep(delay)
 
     # Make sure the data starts with the right bytes
     if image_data[:2] != b"BM":
         LOGGER.info(f"Invalid BMP file: It doesn't start with BM.")
         await send_error(writer, b"ERROR: BMP file does not start with BM")
         return
+
+    if delay:
+        LOGGER.info("Sleeping...")
+        await asyncio.sleep(delay)
 
     path = Path(ROOT_DIR) / homework_id
     path.mkdir(parents=True, exist_ok=True)
