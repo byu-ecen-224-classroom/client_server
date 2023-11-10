@@ -6,7 +6,7 @@ PORT = 2240  # The same port as used by the server
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
 
-    with open("photos/123456789/2023-11-03T16:52:29.378815-06:00.bmp", "rb") as f:
+    with open("photos/123456789/2023-11-04T03:01:13+00:00.bmp", "rb") as f:
         s.sendall(b"ABCDEF123")
         file_data = f.read()
         s.sendall(file_data[:50])
