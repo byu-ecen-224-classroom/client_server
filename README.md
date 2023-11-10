@@ -20,7 +20,7 @@ This create two servers:
 
 The web server stores students' images based on their homework IDs (as reported in LS). For example, if a student's homework ID was ABC123456, then they would navigate to `http://ecen224.byu.edu:2241/ABC123456` (assuming the host is ecen224.byu.edu).
 
-Between semesters, you might need to delete the photos folder.
+Between semesters, you might need to delete the photos folder, except for `photos/123456789`.
 
 ## Running in the Background
 
