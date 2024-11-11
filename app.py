@@ -14,13 +14,21 @@ import jinja2
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(level=logging.INFO)
 
-# Set up output to file
-LOGGER.addHandler(
-    logging.handlers.TimedRotatingFileHandler("client_lab_server.log", when="midnight")
+# Set up output to file with a timed rotating file handler
+file_handler = logging.handlers.TimedRotatingFileHandler(
+    "client_lab_server.log", when="midnight", backupCount=30
 )
-# Set up output to terminal
-LOGGER.addHandler(logging.StreamHandler())
+file_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+)
+LOGGER.addHandler(file_handler)
 
+# Set up output to terminal
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+)
+LOGGER.addHandler(console_handler)
 
 HOMEWORK_ID_LENGTH = 9
 IMAGE_SIZE = 49206
