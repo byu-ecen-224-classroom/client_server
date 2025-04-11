@@ -69,7 +69,7 @@ async def handle_client(reader, writer, delay=0, timeout=5):
         )
         return
 
-    if not re.fullmatch("[A-F0-9]{9}", homework_id):
+    if not re.fullmatch("[A-F0-9]{9}", homework_id) or homework_id == "123456789":
         LOGGER.info(f"Invalid homework_id: {homework_id[:50]}")
         await send_error(
             writer, f"ERROR: Invalid homework ID {homework_id[:50]}".encode()
